@@ -7,7 +7,7 @@ def main():
     x_train, y_train, x_test, y_test = load_and_preprocess_data('jandata.csv')
     
     print("Splitting data for clients...")
-    client_data = split_data_for_clients(x_train, y_train, x_test, y_test, num_clients=2)
+    client_data = split_data_for_clients(x_train, y_train, x_test, y_test, num_clients=1)
 
     print("Starting Flower client...")
     fl.client.start_numpy_client(
