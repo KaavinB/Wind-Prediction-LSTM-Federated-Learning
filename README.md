@@ -1,66 +1,42 @@
-# Federated Learning LSTM Model for Time Series Forecasting
+# Wind Forecasting with Federated Learning
 
-This project implements a federated learning approach using LSTM (Long Short-Term Memory) neural networks for time series forecasting. The system is built using TensorFlow and Flower (flwr) for federated learning.
+This repository is a small experiment in training an LSTM model with Flower. The example uses wind forecast data from `jandata.csv` and averages model updates on a server rather than combining raw records there.
 
-## Project Overview
+## Run the federated example
 
-This federated learning system allows multiple clients to collaboratively train an LSTM model without sharing their raw data. The model is designed to forecast time series data, specifically tailored for energy-related predictions.
+Install the dependencies:
 
-### Key Components:
-
-1. LSTM Model: Defined in `lstm_model.py`
-2. Federated Learning Client: Implemented in `client.py`
-3. Data Preparation: Handled by `prepare_data.py`
-4. Federated Learning Server: Set up in `server.py`
-5. Main Execution Script: `run_federated_learning.py`
-
-## Setup and Installation
-
-### 1. Clone this repository:
 ```bash
-git clone https://github.com/KaavinB/Wind-Prediction-LSTM-Federated-Learning.git
- ```
-### 2. Install dependencies:
-```bash
-pip install tensorflow pandas numpy scikit-learn flwr
+python -m pip install tensorflow pandas numpy scikit-learn flwr
 ```
-3. Ensure `jandata.csv` is in the project directory.
-4. Start the server: python server.py
-5. Run clients in separate terminals: python run_federated_learning.py
 
-## 🏗️ Project Structure
+Keep `jandata.csv` in the project directory. Start the server in one terminal:
 
-- `client.py`: Federated learning client (Flower's `NumPyClient`)
-- `lstm_model.py`: LSTM model architecture and utilities
-- `prepare_data.py`: Data loading, preprocessing, and splitting
-- `run_federated_learning.py`: Main script to start a client
-- `server.py`: Federated learning server setup and execution
+```bash
+python server.py
+```
 
-## 📊 Data
+Start the client in two separate terminals:
 
-Use `jandata.csv` with columns:
-- Datetime
-- Region
-- Grid connection type
-- Offshore/onshore
-- Most recent forecast (target variable)
-- Other relevant features
+```bash
+python run_federated_learning.py
+```
 
-## 🛠️ Customization
+There is an important limitation in the current setup: the server is configured to wait for at least two clients, while each run of `run_federated_learning.py` starts one client. Starting that script twice will meet the server's client count, but both clients load and train on the same full dataset. The launcher does not currently assign separate data to each client, so this is not yet a useful simulation of independent data owners.
 
-- Adjust client numbers, LSTM architecture, or training parameters in respective files
-- Modify data preprocessing in `prepare_data.py` for different datasets
+The server runs 50 rounds of FedAvg. Each client trains locally for five epochs per round and reports loss and mean squared error on its test split.
 
-## 🤝 Contributing
+## Data and preprocessing
 
-Contributions welcome! Fork the repo and submit a pull request with your changes.
+The CSV must include `Datetime`, `Resolution code`, `Decremental bid Indicator`, `Region`, `Grid connection type`, `Offshore/onshore`, and `Most recent forecast`. Other numeric columns are used as input features. The preprocessing code parses dates in `%d-%m-%Y %H:%M` format, removes the date and two metadata columns, label-encodes the three categorical columns, filters values outside the 5th to 95th percentile range, and keeps at most 2,000 rows.
 
-## 🙏 Acknowledgments
+`Most recent forecast` is the target. The rows are split randomly into training and test sets. Although the model uses an LSTM layer, the current code reshapes each row's features as the LSTM input; it does not build sliding windows of consecutive timestamps. The train/test split is not chronological.
 
-Built with [Flower](https://flower.dev/) - a friendly federated learning framework.
+## Files
 
----
-
-<p align="center">
-Made with ❤️ by Kaavin
-</p>
+- `prepare_data.py` loads, filters, and splits the CSV data.
+- `lstm_model.py` defines the Keras model and parameter helpers.
+- `client.py` implements the Flower client and its local training and evaluation.
+- `run_federated_learning.py` loads the data and starts one client.
+- `server.py` starts the Flower server and configures FedAvg.
+- `lstm_final.py` contains a separate, non-federated training and plotting experiment.
